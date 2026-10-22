@@ -1,6 +1,6 @@
 {
   "name": "@nolit/dsh-sidebar-manager",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": false,
   "description": "Hard-delete archived sessions, archive workspaces, move sessions, and fork into a new workspace.",
   "icon": "./icon.svg",

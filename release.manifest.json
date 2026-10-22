@@ -1,0 +1,36 @@
+{
+  "$schema": "../../release-harness/schema/release.manifest.schema.json",
+  "specVersion": "1.0",
+  "project": {
+    "id": "dsh-sidebar-manager",
+    "displayName": "DSH Sidebar Manager",
+    "versionSource": { "type": "package.json", "path": "package.json" },
+    "license": "MIT",
+    "homepage": "https://github.com/linuxsung/dsh-sidebar-manager#readme",
+    "repository": "https://github.com/linuxsung/dsh-sidebar-manager",
+    "description": {
+      "en": "Sidebar Manager for DeepSeek Harness: purge, archive/restore, move, rename, and fork sessions and workspaces.",
+      "ko": "딥시크 하네스 사이드바 관리자: 세션·워크스페이스 삭제, 보관/복원, 이동, 이름 변경, 포크."
+    }
+  },
+  "source": {
+    "root": "."
+  },
+  "artifacts": [
+    { "name": "dsh-sidebar-manager-{{version}}.zip", "format": "zip", "from": "." }
+  ],
+  "docs": {
+    "enabled": false
+  },
+  "publish": {
+    "github": {
+      "owner": "linuxsung",
+      "repo": "dsh-sidebar-manager",
+      "visibility": "public",
+      "topics": ["deepseek-harness", "dsh", "productivity", "session", "sidebar", "workspace"],
+      "release": {
+        "notes": "Sidebar Manager for DeepSeek Harness."
+      }
+    }
+  }
+}
