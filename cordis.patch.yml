@@ -1,0 +1,8 @@
+# Sidebar Manager bundle layer.
+# The package is the bundle; this row activates its Host half. Configuration is
+# optional: the Host resolves DSH_HOME, the backup directory, and the projects
+# root at activation time, so the package stays portable across machines.
+- insert:
+    - id: sidebar-manager
+      name: '@nolit/dsh-sidebar-manager'
+      config: {}

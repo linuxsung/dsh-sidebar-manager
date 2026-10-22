@@ -1,0 +1,82 @@
+{
+  "name": "@nolit/dsh-sidebar-manager",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Hard-delete archived sessions, archive workspaces, move sessions, and fork into a new workspace.",
+  "icon": "./icon.svg",
+  "keywords": [
+    "dsh",
+    "sidebar",
+    "workspace",
+    "session",
+    "archive",
+    "productivity"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/linuxsung/dsh-sidebar-manager.git"
+  },
+  "homepage": "https://github.com/linuxsung/dsh-sidebar-manager#readme",
+  "license": "MIT",
+  "author": "nolit",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./icon": "./icon.svg",
+    "./locale/*.json": "./locale/*.json",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "lib/transaction.mjs",
+    "lib/session-log.mjs",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "market/index.json",
+    "market/icons/*.svg",
+    "README.md",
+    "README.ko.md",
+    "package.json",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=24",
+    "dsh": ">=0.2.1-rc.2 <0.3.0"
+  },
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-api-remotes",
+        "@deepseek-ai/dsh-api-workspace-controller",
+        "@deepseek-ai/dsh-api-session-controller",
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-session",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ]
+    }
+  },
+  "peerDependencies": {},
+  "devDependencies": {
+    "@deepseek-ai/dsh-package-manifest": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-plugin-market-index": "0.2.1-rc.2",
+    "tsdown": "^0.15.0"
+  },
+  "bugs": {
+    "url": "https://github.com/linuxsung/dsh-sidebar-manager/issues"
+  }
+}

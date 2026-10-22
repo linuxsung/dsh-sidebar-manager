@@ -1,0 +1,83 @@
+{
+  "format": 1,
+  "title": {
+    "en": "Nolit DSH Plugins",
+    "ko": "노릿 DSH 플러그인"
+  },
+  "description": {
+    "en": "Local-first extensions for DeepSeek Harness.",
+    "ko": "DeepSeek Harness용 로컬 우선 확장."
+  },
+  "metadata": {
+    "categories": {
+      "productivity": {
+        "title": {
+          "en": "Productivity",
+          "ko": "생산성"
+        }
+      }
+    },
+    "labels": {
+      "ui": {
+        "title": {
+          "en": "UI",
+          "ko": "UI"
+        }
+      },
+      "stable": {
+        "title": {
+          "en": "Stable",
+          "ko": "안정"
+        }
+      }
+    },
+    "sortKeys": {}
+  },
+  "plugins": [
+    {
+      "name": "@nolit/dsh-sidebar-manager",
+      "title": {
+        "en": "Sidebar Manager",
+        "ko": "사이드바 관리자"
+      },
+      "description": {
+        "en": "Hard-delete archived sessions, archive workspaces, move sessions, and fork into a new project workspace.",
+        "ko": "보관된 세션 영구 삭제, 워크스페이스 보관, 세션 이동, 새 프로젝트로 분기를 제공합니다."
+      },
+      "icon": "icons/sidebar-manager.svg",
+      "author": "nolit",
+      "homepage": "https://github.com/linuxsung/dsh-sidebar-manager#readme",
+      "repository": {
+        "url": "https://github.com/linuxsung/dsh-sidebar-manager"
+      },
+      "metadata": {
+        "category": "productivity",
+        "keywords": [
+          "sidebar",
+          "session",
+          "archive",
+          "move",
+          "fork",
+          "trash"
+        ],
+        "labels": [
+          "ui",
+          "stable"
+        ],
+        "sortKeys": {}
+      },
+      "versions": [
+        {
+          "version": "0.1.0",
+          "publishTimestamp": 1792691581,
+          "source": {
+            "type": "npm"
+          },
+          "engines": {
+            "dsh": ">=0.2.1-rc.2 <0.3.0"
+          }
+        }
+      ]
+    }
+  ]
+}
