@@ -1,121 +1,264 @@
 # Sidebar Manager
 
-> 상태: active (v0.1.2 integrity hotfix) · 최종 갱신: 2026-10-23 · Repository: [linuxsung/dsh-sidebar-manager](https://github.com/linuxsung/dsh-sidebar-manager)
+**English** · [한국어](README.ko.md)
 
-## 인덱스
+> Status: active (v0.1.3) · Last updated: 2026-10-23 · Repository: [linuxsung/dsh-sidebar-manager](https://github.com/linuxsung/dsh-sidebar-manager)
 
-| 섹션 | 목적 |
+## Index
+
+| Section | Purpose |
 |---|---|
-| 0.1.2 핫픽스 | 공개판 무결성 결함 교정 내용 |
-| 개요 | 플러그인 기능과 범위 |
-| 구현 상태 | P1 UI / P2 Host / P3 manager panel |
-| 구조 | 패키지 파일 역할 |
-| 설치 | 로컬/마켓 설치 방법 |
-| 안전 규칙 | Move/Fork/Delete 트랜잭션 원칙 |
+| v0.1.3 documentation hotfix | English default and Korean companion alignment |
+| M1–M4 promotion cores | Type A registration, Type B-cold, live handoff API, journal and lock |
+| Implementation status | P1 UI / P2 Host / P3 manager panel / M1–M4 |
+| Overview | What the plugin does and what it does not do |
+| Layout | Package file responsibilities |
+| Install | Local checkout and marketplace install |
+| Safety rules | Move/Fork/Delete transaction invariants |
+| Confirmation gate | What must be shown before a risky operation |
+| UI copy (i18n) | Where user-facing strings live |
 
-## 0.1.2 핫픽스
+## v0.1.3 documentation hotfix
 
-공개판 v0.1.1의 boot finalizer에서 두 가지 무결성 결함을 교정했다.
+The published v0.1.2 root `README.md` was Korean, while `README.ko.md` held an older
+and shorter Korean copy. Starting with v0.1.3 the repository follows the global
+documentation standard:
 
-- **F1 — 중복 계정 방지:** Move/Rename/Fork finalizer가 target에 먼저 attach하고
-  기존 workspace에서 나중에 detach하던 순서를 **detach → attach**로 바꿨다.
-  attach 직후 크래시해도 같은 세션이 두 워크스페이스에 계정되지 않는다.
-  detach 후 attach 전에 중단되면 세션은 일시적으로 미분류가 되며, journal이
-  `files-ready`로 남아 다음 부팅에서 attach를 재시도한다.
-- **F2 — 롤백 범위 격리:** `prepared`/`dir-renamed` 롤백이 `workspace.json` 전체를
-  백업으로 덮어쓰던 동작을 제거했다. 이제 세션 로그·projcache·생성 디렉토리만
-  되돌리며, 동시에 추가된 다른 워크스페이스 등록은 보존한다.
+- `README.md` is the English default and links to the Korean companion.
+- `README.ko.md` is the full Korean translation and links back to `README.md`.
+- `release-harness` now validates the staged documentation on every `run` and
+  `publish`: an English root, a localized companion, and reciprocal top-of-file
+  switchers. A non-English root stops the release with exit 5 before packaging.
 
-검증:
+This release also publishes the M1–M4 promotion host cores that landed on `main`
+after v0.1.2. The UI button, shortcut, and automatic skill trigger (M5) are still
+out of scope.
 
-- `npm test` — transaction regression **5/5 pass**
-- 격리 DSH 3099 Playwright E2E — **55/55 checks, failed 0**
-- Move/Rename/Fork 각각 `files-ready → restart → committed` 실기동 확인
+## M1–M4 promotion cores
 
-## 구현 상태
+Host-level project promotion API. It does not yet include a UI button, a shortcut,
+or automatic skill activation (M5).
 
-- **P1 Client UI 완료** — 세션 hover 휴지통, `⋯` 메뉴 3종, Confirmation Gate 다이얼로그가 `lib/client.js`에 구현됨.
-- **P2 Host 완료** — preview 3종(`session/move`, `workspace/rename-folder`, `session/fork-to-workspace`)과 purge/archive/restore/archived/move/rename-folder/fork route, journal + boot finalizer가 `lib/transaction.mjs`에 구현됨.
-- **P3 Manager Panel 완료** — `sidebar.panellist` + `main` 패널로 상단 세 번째 메뉴에 배치. 행별 인라인 이름 편집, 폴더 포함 체크, 이름 변경/보관 2버튼, 폴더 변경에만 Gate 적용. 하단 footer 버튼 제거.
-- **실기동 E2E 통과** — 격리 DSH 인스턴스(port 3099)에서 Playwright **55/55 checks** 통과. Move/Rename/Fork는 실제 서버 재시작 후 finalizer까지 검증.
+> **Important distinction:** Type A is currently **Register (directory
+> registration)**. It attaches only sessions whose `cwd` matches the registered
+> directory; it does not move the parent session that worked from another `cwd`.
+> The full **Promote** path requires an `existing + sessionId +
+> sessionPolicy(move|handoff|defer)` connector. For that reason
+> `release-harness` currently declares `sessionIds: []`.
 
-## 개요
+```text
+POST /api/local/sidebar/promotion/preview
+POST /api/local/sidebar/promotion/apply
+POST /api/local/sidebar/promotion/status
+```
 
-DSH 사이드바에서 세션과 워크스페이스를 관리하는 단일 로컬 플러그인입니다.
+### Type A — register an existing directory
 
-1. **영구 삭제** — 아카이브된 Cold 세션의 로그·projcache·registry 매핑을 정리합니다.
-2. **워크스페이스 아카이브** — 소속 세션을 Archive한 뒤 워크스페이스 등록을 해제하고, 상단 Workspace manager 패널에서 복원합니다.
-3. **Move to Workspace** — Cold 세션의 zstd 헤더 CWD를 재작성하고 물리 경로·레지스트리를 2PC로 갱신합니다.
-4. **Fork to New Workspace** — 새 프로젝트 디렉터리+워크스페이스를 만든 뒤, 원본 세션 로그를 새 ID로 복제해 첫 세션으로 배치합니다. 라이브 자식 세션을 만들지 않아 재시작 finalizer가 안전하게 attach합니다.
-5. **Workspace Manager 패널** — 상단 3번째 메뉴. 행에서 이름을 직접 편집하고 Enter로 저장합니다. 폴더 포함 시에만 실제 디렉토리명 입력과 Confirmation Gate가 나타납니다.
+```json
+{ "mode": "existing", "path": "C:\\...\\release-harness", "title": "Universal Release Ops Harness" }
+```
 
-## 구조
+- Canonical `realpath`, `projectsRoot` containment, default-workspace and
+  duplicate-title blocking.
+- Attaches unaccounted sessions with the same `cwd`, oldest first. The result is
+  ordered newest first.
+- Uses only the public `workspaceRegistry.create(path, title)` API.
+- `restartRequired=false`; `workspace.follow` reflects the change immediately.
+- **Sessions with a different `cwd` are not attached.** Moving them requires a
+  separate `sessionPolicy`.
 
-| 경로 | 역할 |
+### Type B-cold — scratch directory plus session relocation
+
+```json
+{ "mode": "scratch-cold", "sessionId": "session-...", "path": "C:\\...\\new-project", "title": "New Project" }
+```
+
+- Cold sessions only.
+- Creates the target directory → `git init -b main` → `release.manifest.json`
+  template → initial commit.
+- Moves the session log through staging → `buildRelocated` → `verifyRelocated` →
+  rename. Event frames are preserved byte-for-byte; only the header `cwd` is
+  rewritten.
+- Writes a `prepared → provisioned → log-ready → files-ready` journal and returns
+  `restartRequired=true`.
+- The next boot finalizer creates the target workspace and confirms ownership with
+  **detach → attach**.
+- On a crash before `log-ready` the original log and cache are restored; a
+  `files-ready` journal resumes finalization.
+
+### Type B-live — handoff from the last completed turn
+
+```json
+{ "mode": "scratch-handoff", "sessionId": "session-...", "path": "C:\\...\\new-project", "title": "New Project" }
+```
+
+- The source session may be live. Only the completed prefix after the last
+  `turn/end` is used as the seed.
+- Creates a new session with `agents.create({ seed, inheritedEventCount, cwd:
+  target, parentSession, isSeeded: true })` and mounts the existing agent preset.
+- Creates the target workspace and attaches the new session immediately.
+  `restartRequired=false`.
+- The source session ID and ownership do not change. A new session ID is issued.
+- Journal: `prepared → workspace-ready → child-created → committed`. If the
+  process crashes at `child-created`, the boot finalizer retries only the attach.
+
+### Shared mechanics
+
+- Paths: `stateDir/promotion/pending.json`, `stateDir/promotion/lock.json`.
+- Single-writer lock with stale PID/TTL reclamation.
+- Target path, title, and Windows name validation live in
+  `lib/path-policy.mjs` and `lib/provision.mjs`.
+- The generated `release.manifest.json` template uses the `release-harness`
+  schema URL and an initial `0.1.0` version.
+
+Verification: `npm test` **33/33**, isolated Playwright E2E **83/83**.
+The E2E suite exercises Type A immediate visibility, the Type B-cold restart
+finalizer, and Type B-live new-session/immediate-UI behavior on a real DSH.
+
+### Next connector (not implemented)
+
+```json
+{
+  "mode": "existing",
+  "path": "C:\\...\\release-harness",
+  "title": "Universal Release Ops Harness",
+  "sessionId": "session-7b2cc3e8-ae1c-4ba6-bdb7-66cc0933366e",
+  "sessionPolicy": "move"
+}
+```
+
+- `move`: cold only, same ID, restart.
+- `handoff`: live allowed, new ID, no restart.
+- `defer`: switch the execution cwd first, then move and restart after the turn
+  ends.
+
+## Implementation status
+
+- **P1 Client UI complete** — session hover trash, the three-item `⋯` menu, and
+  the Confirmation Gate dialog live in `lib/client.js`.
+- **P2 Host complete** — three preview routes (`session/move`,
+  `workspace/rename-folder`, `session/fork-to-workspace`) plus
+  purge/archive/restore/archived/move/rename-folder/fork routes, journal, and boot
+  finalizer in `lib/transaction.mjs`.
+- **P3 Manager Panel complete** — `sidebar.panellist` plus the `main` panel as the
+  third top-level menu. Inline row rename, include-folder checkbox,
+  rename/archive buttons, and the folder-change gate. The footer button was
+  removed.
+- **M1–M4 promotion Host complete** — Type A path policy/journal/lock,
+  Type B-cold provisioning and 2PC, Type B-live handoff. Includes the
+  preview/apply/status routes and the boot finalizer. UI and automatic activation
+  remain follow-up work.
+- **Live E2E passing** — Playwright **83/83 checks** in an isolated DSH instance
+  (port 3099), covering the Move/Rename/Fork restart finalizers, Type A,
+  Type B-cold, and handoff.
+
+## Overview
+
+A single local plugin that manages sessions and workspaces from the DSH sidebar.
+
+1. **Permanent delete** — removes the log, project cache, and registry mapping of
+   an archived cold session.
+2. **Workspace archive** — archives member sessions, releases the workspace
+   registration, and restores it from the top Workspace manager panel.
+3. **Move to Workspace** — rewrites the zstd header `cwd` of a cold session and
+   updates the physical path plus registry through 2PC.
+4. **Fork to New Workspace** — creates a new project directory and workspace, then
+   copies the source session log under a new ID as its first session. It creates no
+   live child, so the restart finalizer can attach safely.
+5. **Workspace Manager panel** — the third top-level menu. Edit a row name inline
+   and press Enter to save. The real directory-name input and Confirmation Gate
+   appear only when the folder is included.
+
+## Layout
+
+| Path | Role |
 |---|---|
-| `lib/index.js` | Host 엔트리. 공개 Exact Fetch route 등록 |
-| `lib/transaction.mjs` | 2PC·Move/Archive/Purge/Fork 구현 |
-| `lib/session-log.mjs` | zstd 프레임 파싱·헤더 재작성/복제·무결성 검증 |
-| `lib/client.js` | Browser 엔트리. 공식 Slot 등록 |
-| `cordis.patch.yml` | 프로필 번들 patch |
-| `locale/{en,ko}.json` | 플러그인 표시 메타데이터 |
-| `market/index.json` | 마켓 인덱스(format 1) 템플릿 |
+| `lib/index.js` | Host entry. Registers transaction and promotion Exact Fetch routes |
+| `lib/transaction.mjs` | 2PC for Move/Archive/Purge/Fork |
+| `lib/promotion.mjs` | Promotion mode dispatch, Type A preview/apply/status, boot finalizer |
+| `lib/promotion-store.mjs` | Promotion journal, atomic writes, single-writer lock |
+| `lib/provision.mjs` | Scratch-target planning, Git init, `release.manifest.json` template |
+| `lib/scratch-promotion.mjs` | Type B-cold provisioning, log relocation, rollback/finalizer |
+| `lib/handoff.mjs` | Type B-live boundary/seed, agent preset mount, child attach |
+| `lib/path-policy.mjs` | Canonical path, `projectsRoot` containment, title/name validation |
+| `lib/session-log.mjs` | zstd frame parsing, header rewrite/copy, integrity verification |
+| `lib/client.js` | Browser entry. Registers the official slots |
+| `cordis.patch.yml` | Profile bundle patch |
+| `locale/{en,ko}.json` | Plugin display metadata |
+| `market/index.json` | Marketplace index (format 1) template |
 
-## 설치
+## Install
 
 ```powershell
-# npm 배포 후
+# after an npm release
 dsh plugin --profile web add @nolit/dsh-sidebar-manager
 
-# 로컬 체크아웃을 쓰는 경우
+# local checkout
 dsh plugin --profile web add link:<path-to-dsh-sidebar-manager>
 ```
 
-마켓 배포 시 `npm publish` 후 `market/index.json`의 `versions`를 갱신하고,
-Plugins → Discover에서 인덱스 URL을 추가합니다.
+For marketplace distribution, run `npm publish`, update `versions` in
+`market/index.json`, then add the index URL from Plugins → Discover.
 
-## 안전 규칙
+## Safety rules
 
-- Move/Fork는 **Cold 세션만** 허용하며, 활성/열린 세션은 거부합니다.
-- Fork는 `sessionController.fork` 대신 원본 로그를 새 ID로 복제합니다(live 자식 회피).
-- finalizer는 **detach → attach** 순서를 지킵니다. attach 실패 시 세션은 미분류로 남고 journal이 재시도를 보장합니다.
-- 롤백은 `workspace.json` 전체를 복원하지 않습니다. 트랜잭션이 만진 로그·캐시·디렉토리만 되돌려 동시 registry 변경을 보존합니다.
-- 타이틀만 변경하면 즉시 저장하고 재시작이 필요 없습니다. 실제 디렉토리 변경은 Gate 확인 후 재시작으로 반영됩니다.
-- 파일 조작 전 `~/.dsh/backup/<txid>/`에 원본 스냅샷을 남깁니다.
-- 새 위치에 헤더 재작성 파일을 먼저 쓰고 무결성 검증을 통과한 뒤에만
-  구 경로 정리와 레지스트리 갱신을 수행합니다.
-- 이동 시 에이전트의 향후 CWD가 새 워크스페이스로 바뀜을 확인 다이얼로그에서 고지합니다.
+- Move/Fork accepts **cold sessions only**; active or open sessions are rejected.
+- Fork copies the source log under a new ID instead of calling
+  `sessionController.fork`, avoiding a live child.
+- The finalizer always uses **detach → attach**. If attach fails, the session
+  remains unaccounted and the journal guarantees a retry.
+- Rollback does not restore the whole `workspace.json`. It reverts only the log,
+  cache, and directory touched by the transaction, preserving concurrent registry
+  changes.
+- A title-only change saves immediately without a restart. A real directory change
+  is applied after the Confirmation Gate and a restart.
+- Every file operation snapshots the original under `~/.dsh/backup/<txid>/`.
+- The rewritten header file is written to the new location and passes integrity
+  verification before the old path is cleaned up and the registry is updated.
+- The confirmation dialog discloses that the agent's future CWD will move to the
+  new workspace.
 
-## 위험 작업 확인 게이트 (Confirmation Gate)
+## Confirmation Gate
 
-Move · Fork to New Workspace · Folder-linked Rename은 **작업 시작 전** 다이얼로그에서 아래
-4가지를 한 화면에 표시하고, 확인 체크 전에는 실행 버튼을 비활성화합니다.
+Before Move, Fork to New Workspace, or a folder-linked Rename, the dialog shows
+the following on one screen and keeps the execute button disabled until the
+confirmation checkbox is checked:
 
-1. **영향 범위 사전 표시** — 영향받는 Cold 세션 수 `N`, 기존 경로 → 새 경로, 대상 워크스페이스 제목/ID.
-2. **CWD 변경 경고** — "이후 에이전트의 명령 실행·파일 생성 기준 경로가 `newPath`로 바뀝니다."
-3. **재시작 필요 사전 안내** — "파일 재배치 후 DSH 서버 재시작이 필요하며, 재시작 전에는 사이드바에 반영되지 않습니다."
-4. **명시적 확인** — `[ ] 위 내용을 확인했으며, 재시작 후 반영됨을 이해합니다.` 체크 전 실행 버튼 disabled.
+1. **Impact preview** — affected cold-session count `N`, old path → new path, and
+   target workspace title/ID.
+2. **CWD warning** — "From now on, commands run and files created by the agent
+   will be rooted at `newPath`."
+3. **Restart notice** — "Files are relocated now, but the sidebar will not reflect
+   the change until the DSH server restarts."
+4. **Explicit confirmation** — the execute button stays disabled until
+   `[ ] I understand the impact and that a restart is required.` is checked.
 
-실행 버튼 활성 조건:
+Execute-button conditions:
 
-```
+```text
 preflight.preview.ok === true
   && confirmCheckbox === true
   && preflight.liveSessionCount === 0
   && (folderRename ? preflight.isDefaultWorkspace === false : true)
 ```
 
-`preflight.preview` route는 **파일을 쓰지 않는 read-only** 응답으로
+`preflight.preview` is a **read-only** route that returns
 `{ affectedSessionCount, liveSessionCount, oldPath, newPath, targetExists,
-   workspaceTitle, isDefaultWorkspace, blockers[] }`를 반환합니다.
-`blockers`가 비어있지 않으면 실행 버튼과 체크박스를 모두 비활성화하고 사유를 표시합니다.
+   workspaceTitle, isDefaultWorkspace, blockers[] }`.
+A non-empty `blockers` disables both the execute button and the checkbox and shows
+the reason.
 
-## UI 문구(i18n)
+## UI copy (i18n)
 
-사용자에게 보이는 모든 문구는 **[lib/client.js](<lib/client.js>) 상단의 `I18N = { ko: {...}, en: {...} }` 객체 하나**에만 존재합니다.
-코드 본문에는 UI 텍스트를 하드코딩하지 않습니다.
+Every user-facing string lives in **one `I18N = { ko: {...}, en: {...} }` object at
+the top of [lib/client.js](<lib/client.js>)**. Do not hardcode UI text in the rest
+of the code.
 
-- 키 구조는 `ko`/`en`이 동일해야 하며, 문구 수정은 해당 객체만 고치면 됩니다.
-- 언어는 `navigator.language`가 `ko*`이면 한국어, 그 외에는 영어로 자동 선택됩니다.
-- `{count}`, `{oldPath}`, `{newPath}` 같은 자리표시자는 `t(key, vars)`에서 치환됩니다.
-- 플러그인 목록에 표시되는 제목/설명은 별도로 `locale/{en,ko}.json`의 `meta`가 담당합니다.
+- The `ko` and `en` key structures must match; edit only that object for copy
+  changes.
+- The language follows `navigator.language`: `ko*` selects Korean, otherwise
+  English.
+- Placeholders such as `{count}`, `{oldPath}`, and `{newPath}` are replaced by
+  `t(key, vars)`.
+- Marketplace titles/descriptions are handled separately by the `meta` object in
+  `locale/{en,ko}.json`.

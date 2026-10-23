@@ -20,7 +20,9 @@
     { "name": "dsh-sidebar-manager-{{version}}.zip", "format": "zip", "from": "." }
   ],
   "docs": {
-    "enabled": false
+    "enabled": false,
+    "defaultLocale": "en",
+    "locales": ["en", "ko"]
   },
   "publish": {
     "github": {
@@ -29,7 +31,7 @@
       "visibility": "public",
       "topics": ["deepseek-harness", "dsh", "productivity", "session", "sidebar", "workspace"],
       "release": {
-        "notes": "Integrity hotfix v0.1.2. Finalizers now detach a session from its previous workspace before attaching it to the target, preventing duplicate ownership and boot-time registry corruption after a crash. Rollback no longer restores the whole workspace registry; only the transaction's session log, projection cache, and created directory are reverted. Verified with 5 transaction regression tests and 55 isolated Playwright E2E checks."
+        "notes": "v0.1.3 documentation parity hotfix and M1-M4 promotion host cores. README.md is now the English default with a reciprocal Korean README.ko.md; release-harness enforces this contract on every run and publish. This release also publishes the Type A registration, Type B-cold provisioning, and Type B-live handoff host cores that landed on main after v0.1.2. UI, shortcut, and automatic skill activation (M5) remain out of scope."
       }
     }
   }

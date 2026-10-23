@@ -1,6 +1,6 @@
 {
   "name": "@nolit/dsh-sidebar-manager",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": false,
   "description": "Hard-delete archived sessions, archive workspaces, move sessions, and fork into a new workspace.",
   "icon": "./icon.svg",
@@ -22,7 +22,7 @@
   "type": "module",
   "main": "lib/index.js",
   "scripts": {
-    "test": "node --test test/transaction.test.mjs"
+    "test": "node --test test/transaction.test.mjs test/path-policy.test.mjs test/promotion.test.mjs test/provision.test.mjs test/scratch-promotion.test.mjs test/handoff.test.mjs"
   },
   "exports": {
     ".": "./lib/index.js",
@@ -37,6 +37,12 @@
     "lib/client.js",
     "lib/transaction.mjs",
     "lib/session-log.mjs",
+    "lib/path-policy.mjs",
+    "lib/promotion.mjs",
+    "lib/promotion-store.mjs",
+    "lib/provision.mjs",
+    "lib/scratch-promotion.mjs",
+    "lib/handoff.mjs",
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",
