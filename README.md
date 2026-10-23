@@ -1,16 +1,36 @@
 # Sidebar Manager
 
-> 상태: active (P3 panel UI) · 최종 갱신: 2026-10-23 · Repository: [linuxsung/dsh-sidebar-manager](https://github.com/linuxsung/dsh-sidebar-manager)
+> 상태: active (v0.1.2 integrity hotfix) · 최종 갱신: 2026-10-23 · Repository: [linuxsung/dsh-sidebar-manager](https://github.com/linuxsung/dsh-sidebar-manager)
 
 ## 인덱스
 
 | 섹션 | 목적 |
 |---|---|
+| 0.1.2 핫픽스 | 공개판 무결성 결함 교정 내용 |
 | 개요 | 플러그인 기능과 범위 |
 | 구현 상태 | P1 UI / P2 Host / P3 manager panel |
 | 구조 | 패키지 파일 역할 |
 | 설치 | 로컬/마켓 설치 방법 |
 | 안전 규칙 | Move/Fork/Delete 트랜잭션 원칙 |
+
+## 0.1.2 핫픽스
+
+공개판 v0.1.1의 boot finalizer에서 두 가지 무결성 결함을 교정했다.
+
+- **F1 — 중복 계정 방지:** Move/Rename/Fork finalizer가 target에 먼저 attach하고
+  기존 workspace에서 나중에 detach하던 순서를 **detach → attach**로 바꿨다.
+  attach 직후 크래시해도 같은 세션이 두 워크스페이스에 계정되지 않는다.
+  detach 후 attach 전에 중단되면 세션은 일시적으로 미분류가 되며, journal이
+  `files-ready`로 남아 다음 부팅에서 attach를 재시도한다.
+- **F2 — 롤백 범위 격리:** `prepared`/`dir-renamed` 롤백이 `workspace.json` 전체를
+  백업으로 덮어쓰던 동작을 제거했다. 이제 세션 로그·projcache·생성 디렉토리만
+  되돌리며, 동시에 추가된 다른 워크스페이스 등록은 보존한다.
+
+검증:
+
+- `npm test` — transaction regression **5/5 pass**
+- 격리 DSH 3099 Playwright E2E — **55/55 checks, failed 0**
+- Move/Rename/Fork 각각 `files-ready → restart → committed` 실기동 확인
 
 ## 구현 상태
 
@@ -58,6 +78,8 @@ Plugins → Discover에서 인덱스 URL을 추가합니다.
 
 - Move/Fork는 **Cold 세션만** 허용하며, 활성/열린 세션은 거부합니다.
 - Fork는 `sessionController.fork` 대신 원본 로그를 새 ID로 복제합니다(live 자식 회피).
+- finalizer는 **detach → attach** 순서를 지킵니다. attach 실패 시 세션은 미분류로 남고 journal이 재시도를 보장합니다.
+- 롤백은 `workspace.json` 전체를 복원하지 않습니다. 트랜잭션이 만진 로그·캐시·디렉토리만 되돌려 동시 registry 변경을 보존합니다.
 - 타이틀만 변경하면 즉시 저장하고 재시작이 필요 없습니다. 실제 디렉토리 변경은 Gate 확인 후 재시작으로 반영됩니다.
 - 파일 조작 전 `~/.dsh/backup/<txid>/`에 원본 스냅샷을 남깁니다.
 - 새 위치에 헤더 재작성 파일을 먼저 쓰고 무결성 검증을 통과한 뒤에만

@@ -29,7 +29,7 @@
       "visibility": "public",
       "topics": ["deepseek-harness", "dsh", "productivity", "session", "sidebar", "workspace"],
       "release": {
-        "notes": "Sidebar Manager for DeepSeek Harness."
+        "notes": "Integrity hotfix v0.1.2. Finalizers now detach a session from its previous workspace before attaching it to the target, preventing duplicate ownership and boot-time registry corruption after a crash. Rollback no longer restores the whole workspace registry; only the transaction's session log, projection cache, and created directory are reverted. Verified with 5 transaction regression tests and 55 isolated Playwright E2E checks."
       }
     }
   }
